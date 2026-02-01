@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}University Community Blog{% endblock %}</title>
+    <!-- Tailwind CSS CDN (Official) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply Inter font for modern look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+
+    <!-- Header: Dev.to Inspired Navigation -->
+    <header class="sticky top-0 z-10 bg-white shadow-md border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+
+            <!-- Logo -->
+            <div class="flex items-center">
+                <a href="{{ url_for('main.index') }}" class="font-extrabold text-2xl text-gray-800 tracking-tighter hover:text-indigo-600 transition duration-150 rounded-lg p-1">UniBlog</a>
+            </div>
+
+            <!-- Right Side: Search, Actions, Auth -->
+            <div class="flex items-center space-x-3 sm:space-x-5">
+
+                <!-- Search Bar (Visible on desktop/tablet) -->
+                <form class="hidden sm:block" action="{{ url_for('main.index') }}" method="get">
+                    <div class="relative">
+                        <input type="text" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search posts..." aria-label="Search" class="w-48 md:w-64 px-4 pl-10 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition" />
+                        <!-- Search Icon -->
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </form>
+
+                <nav class="flex items-center space-x-2 sm:space-x-3">
+                    {% if not session.get('user_id') %}
+                        <!-- Login/Register CTA -->
+                        <a href="{{ url_for('main.login') }}" class="text-sm font-medium text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-indigo-600 transition">Log in</a>
+                        <a href="{{ url_for('main.register') }}" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg font-semibold hover:bg-blue-700 transition text-sm shadow-md">Create account</a>
+                    {% else %}
+                        <!-- New Post CTA (High Contrast) -->
+                        <a href="{{ url_for('main.new_post') }}" class="hidden sm:inline-flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600 transition text-sm shadow-sm">
+                            New Post
+                        </a>
+                        <!-- Notification Icon -->
+                        <a href="{{ url_for('main.notifications') }}" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition" title="Notifications">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        </a>
+                        <!-- Profile Picture Icon -->
+                        {% if session.get('user_id') %}
+                        <a href="{{ url_for('main.profile', user_id=session.get('user_id')) }}" class="p-1 rounded-full border-2 border-blue-100 hover:border-blue-400 transition">
+                            <img src="{{ url_for('static', filename=current_user.avatar) if current_user and current_user.avatar else url_for('static', filename='images/default_avatar.png') }}" alt="Profile" class="w-8 h-8 rounded-full object-cover" />
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-full mx-auto w-full flex-1 px-4 py-8">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-6">
+              {% for category, msg in messages %}
+                <!-- Use dynamic classes for flash messages -->
+                <div class="rounded-lg px-4 py-3 mb-2 text-sm font-medium 
+                    {{ 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-400' if category == 'success' else 'bg-red-50 text-red-700 border-l-4 border-red-400' }} 
+                    shadow-sm">
+                    {{ msg }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Content Block -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer: Simple and Clean -->
+    <footer class="bg-white border-t border-gray-100 py-4 flex flex-col items-center text-center text-gray-500 text-xs sm:text-sm">
+        <p class="mb-1">&copy; {{ year }} UniBlog Community. All rights reserved.</p>
+        <p>Built with <span class="text-red-500">♥</span> and Flask.</p>
+    </footer>
+
+</body>
+</html>

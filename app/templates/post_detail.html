@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} — UniBlog{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto flex flex-col lg:flex-row items-start gap-4 lg:gap-8 px-4 sm:px-3">
+
+    <!-- 1. Left Sidebar: Sticky Reactions Bar (Dev.to Style) -->
+    <aside class="hidden xl:block w-16 shrink-0 pt-20">
+        <div class="sticky top-24 flex flex-col items-center space-y-4">
+            
+            <!-- Reaction Button: Like (Upvote) -->
+            <button class="upvote-btn flex flex-col items-center justify-center p-2 rounded-full transition duration-150 transform hover:scale-105 {{ 'text-blue-700 bg-blue-100' if current_user and current_user.has_liked(post) else 'text-gray-600 hover:text-blue-700 hover:bg-blue-100' }}" aria-label="Upvote" data-post-id="{{ post.id }}">
+                <svg class="w-7 h-7" fill="{{ 'currentColor' if current_user and current_user.has_liked(post) else 'none' }}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                <span class="text-xs font-semibold mt-1">{{ post.liked_by.count() }}</span>
+            </button>
+
+            
+            <!-- Reaction Button: Bookmark -->
+            <button class="bookmark-btn flex flex-col items-center justify-center p-2 rounded-full transition duration-150 transform hover:scale-105 {{ 'text-green-700 bg-green-100' if current_user and current_user.has_bookmarked(post) else 'text-gray-600 hover:text-green-700 hover:bg-green-100' }}" aria-label="Bookmark" data-post-id="{{ post.id }}">
+                <svg class="w-7 h-7" fill="{{ 'currentColor' if current_user and current_user.has_bookmarked(post) else 'none' }}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5v14l7-7 7 7V5z"></path></svg>
+                <span class="text-xs font-semibold mt-1">Save</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- 2. Main Content Area: Post and Comments -->
+    <div class="flex-1 min-w-0 xl:max-w-full pt-4">
+        <article class="bg-white rounded-xl shadow-lg border border-gray-200">
+            
+            <!-- Post Thumbnail/Cover Image (placed at the top of the card) -->
+            {% if post.thumbnail %}
+                <img src="{{ url_for('main.uploaded_file', filename=post.thumbnail) }}" alt="thumbnail" class="w-full h-80 object-cover rounded-t-xl" />
+            {% endif %}
+
+            <div class="p-6 sm:p-12">
+                <header class="mb-8">
+                    
+                    <!-- Author Info (Minimal here, detailed in right sidebar) -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full overflow-hidden">
+                            <img src="{{ url_for('static', filename=post.author.avatar) if post.author.avatar else url_for('static', filename='images/default_avatar.png') }}" alt="avatar" class="w-10 h-10 rounded-full object-cover" />
+                        </div>
+                        <div>
+                            <a href="{{ url_for('main.profile', user_id=post.author.id) }}" class="text-gray-800 hover:text-blue-600 transition">{{ post.author.username }}</a>
+                            <div class="text-gray-500 text-sm">
+                                Posted on {{ post.date_posted.strftime("%B %d, %Y") }}
+                                <span class="mx-1">•</span>
+                                <span>{{ post.readingTime or 5 }} min read</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Title -->
+                    <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+                        {{ post.title }}
+                    </h1>
+                    
+                    <!-- Tags -->
+                    <div class="mb-4 flex flex-wrap gap-2">
+                        {% for tag in post.tags %}
+                            <a href="?tag={{ tag.name }}" class="text-sm font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-100 px-3 py-1 rounded-full bg-blue-50 transition">#{{ tag.name }}</a>
+                        {% endfor %}
+                    </div>
+                </header>
+
+                <!-- Post Content Section -->
+                <section class="prose max-w-none prose-blue text-gray-800 mb-10">
+                    <!-- Note: assuming post.content is already processed HTML/markdown or similar -->
+                    <p>{{ post.content }}</p>
+                </section>
+                
+                <!-- Comments Section -->
+                <section id="comments" class="mt-8 pt-6 border-t border-gray-100">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Comments ({{ post.comments|length }})</h3>
+                    
+                    <!-- Comment Form -->
+                    <form method="post" class="mb-8 space-y-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                        <textarea name="comment" rows="4" placeholder="Share your thoughts..." class="w-full px-4 py-3 rounded-lg border border-gray-100 focus:border-blue-500 focus:ring focus:ring-blue-100 text-base shadow-sm"></textarea>
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md">Submit Comment</button>
+                    </form>
+                    
+                    <!-- Comment List -->
+                    <ul class="space-y-4">
+                        {% for c in post.comments %}
+                            <li class="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+                                <div class="flex items-start gap-3 mb-2">
+                                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 shrink-0">
+                                        {{ c.user.username[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <strong class="text-gray-800">{{ c.user.username }}</strong>
+                                        <span class="text-gray-400 text-xs ml-2">· {{ c.date_commented.strftime("%b %d, %Y at %H:%M") }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-gray-700 text-base mt-2 pl-11">{{ c.body }}</div>
+                            </li>
+                        {% else %}
+                            <li class="text-gray-500 italic p-4 text-center border border-dashed rounded-lg">Be the first to leave a comment!</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            </div>
+        </article>
+    </div>
+    
+    <!-- 3. Right Sidebar: Sticky Author Card and Context -->
+    <aside class="hidden lg:block w-64 shrink-0 pt-4">
+        <div class="sticky top-20 space-y-6">
+            
+            <!-- Author Card (Dev.to style profile card) -->
+            <section class="bg-white rounded-xl shadow-lg border-t-4 border-blue-600 p-5">
+                <header class="flex items-center gap-3 mb-4 border-b pb-3 border-gray-100">
+                    <img src="{{ url_for('static', filename=post.author.avatar) if post.author.avatar else url_for('static', filename='images/default_avatar.png') }}" alt="avatar" class="w-12 h-12 rounded-full object-cover shrink-0" />
+                    <h4 class="font-bold text-gray-800">{{ post.author.username }}</h4>
+                </header>
+                
+                <!-- Bio / Info -->
+                <p class="text-sm text-gray-700 mb-4">
+                    {{ post.author.bio or 'Developer, student, and caffeine enthusiast. Always learning new things and sharing the journey.' }}
+                </p>
+                
+                <div class="mt-4 text-xs text-gray-500 space-y-1">
+                    <p><strong class="text-gray-800">JOINED:</strong> {% if post.author.date_joined %} {{ post.author.date_joined.strftime("%b %Y") }} {% else %} Unknown {% endif %}</p>
+                    <p><strong class="text-gray-800">LOCATION:</strong> University Campus</p>
+                </div>
+            </section>
+
+            <!-- More from UniBlog (Related/Similar Posts) -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Trending on UNIBLOG</h3>
+                <ul class="space-y-3">
+                    {% for rp in related_posts %}
+                        <li class="hover:bg-blue-50 p-2 rounded-lg transition duration-150">
+                            <a href="{{ url_for('main.post_detail', post_id=rp.id) }}" class="block text-sm font-medium text-gray-700 hover:text-blue-600">
+                                {{ rp.title }}
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    {% if rp.tags %}
+                                        {% for t in rp.tags[:3] %}#{{ t.name }} {% endfor %}
+                                    {% else %}
+                                        #general
+                                    {% endif %}
+                                </p>
+                            </a>
+                        </li>
+                    {% else %}
+                         <li class="text-gray-500 text-sm p-2">No related posts yet.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+    </aside>
+</div>
+
+<script>
+// Upvote logic for post detail
+const upvoteBtn = document.querySelector('.upvote-btn');
+if (upvoteBtn) {
+  upvoteBtn.addEventListener('click', async function(e) {
+    e.preventDefault();
+    const postId = upvoteBtn.getAttribute('data-post-id');
+    const countSpan = upvoteBtn.querySelector('span');
+    upvoteBtn.disabled = true;
+    try {
+      const res = await fetch(`/post/${postId}/upvote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        countSpan.textContent = data.upvotes;
+        const svg = upvoteBtn.querySelector('svg');
+        if (data.liked) {
+            upvoteBtn.classList.remove('text-gray-600', 'hover:text-blue-700', 'hover:bg-blue-100');
+            upvoteBtn.classList.add('text-blue-700', 'bg-blue-100');
+            svg.setAttribute('fill', 'currentColor');
+        } else {
+             upvoteBtn.classList.add('text-gray-600', 'hover:text-blue-700', 'hover:bg-blue-100');
+             upvoteBtn.classList.remove('text-blue-700', 'bg-blue-100');
+             svg.setAttribute('fill', 'none');
+        }
+      }
+    } catch (err) {
+      alert('Upvote failed. Ensure you are logged in.');
+    }
+    upvoteBtn.disabled = false;
+  });
+}
+
+// Bookmark logic for post detail
+const bookmarkBtn = document.querySelector('.bookmark-btn');
+if (bookmarkBtn) {
+    bookmarkBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const postId = bookmarkBtn.getAttribute('data-post-id');
+      bookmarkBtn.disabled = true;
+      try {
+        const res = await fetch(`/post/${postId}/bookmark`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        const svg = bookmarkBtn.querySelector('svg');
+        if (data.success) {
+            if (data.bookmarked) {
+                bookmarkBtn.classList.remove('text-gray-600', 'hover:text-green-700', 'hover:bg-green-100');
+                bookmarkBtn.classList.add('text-green-700', 'bg-green-100');
+                svg.setAttribute('fill', 'currentColor');
+            } else {
+                bookmarkBtn.classList.add('text-gray-600', 'hover:text-green-700', 'hover:bg-green-100');
+                bookmarkBtn.classList.remove('text-green-700', 'bg-green-100');
+                svg.setAttribute('fill', 'none');
+            }
+        }
+      } catch (err) {
+        alert('Bookmark failed. Ensure you are logged in.');
+      }
+      bookmarkBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

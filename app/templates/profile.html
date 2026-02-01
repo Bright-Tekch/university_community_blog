@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }}'s Profile — UniBlog{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Sidebar: User Info -->
+    <aside class="lg:col-span-4 sticky top-24">
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <!-- Profile Banner / Header (Optional Gradient) -->
+        <div class="h-32 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+
+        <div class="px-8 pb-8 flex flex-col items-center -mt-16">
+          <img src="{{ url_for('static', filename=user.avatar) if user.avatar else url_for('static', filename='images/default_avatar.png') }}"
+               alt="Profile Picture" 
+               class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md mb-4 bg-white">
+          
+          <h2 class="text-3xl font-bold text-gray-900 mb-1">{{ user.username }}</h2>
+          <p class="text-sm text-blue-600 font-medium mb-4">{{ user.email }}</p> 
+          <!-- (Optional: Only show email if public/owner, but keeping simple for now) -->
+
+          <p class="text-gray-600 text-center mb-6 leading-relaxed px-4">
+              {{ user.bio or 'No bio provided yet.' }}
+          </p>
+          
+          <!-- Stats Row -->
+          <div class="flex justify-center gap-8 mb-8 w-full border-t border-b border-gray-100 py-4">
+            <div class="text-center group cursor-default">
+              <span class="block text-2xl font-bold text-gray-800 group-hover:text-blue-600 transition">{{ user.posts|length }}</span>
+              <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Posts</span>
+            </div>
+            <div class="text-center group cursor-default">
+              <span class="block text-2xl font-bold text-gray-800 group-hover:text-blue-600 transition">{{ user.followers_count() }}</span>
+              <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Followers</span>
+            </div>
+            <div class="text-center group cursor-default">
+              <span class="block text-2xl font-bold text-gray-800 group-hover:text-blue-600 transition">{{ user.following_count() }}</span>
+              <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Following</span>
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="w-full space-y-3">
+             {% if current_user.id == user.id %}
+                <a href="{{ url_for('main.new_post') }}" class="block w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 hover:scale-[1.02] transform transition text-center">
+                    Create New Post
+                </a>
+                <div class="flex gap-3">
+                    <a href="{{ url_for('main.settings') }}" class="flex-1 flex items-center justify-center gap-2 bg-gray-50 text-gray-700 px-4 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-md transition text-center" title="Settings">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>Settings</span>
+                    </a>
+                    <a href="{{ url_for('main.logout') }}" class="flex-none flex items-center justify-center p-3 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition" title="Logout">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    </a>
+                </div>
+            {% else %}
+               {% if user.is_followed_by(current_user) %}
+                <form method="post" action="{{ url_for('main.unfollow', user_id=user.id) }}" class="w-full">
+                  <button type="submit" class="w-full bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-xl font-bold hover:bg-red-100 transition">Unfollow</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('main.follow', user_id=user.id) }}" class="w-full">
+                  <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transform transition">Follow</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </aside>
+    <!-- Main Content: User's Posts -->
+    <section class="lg:col-span-8">
+      <!-- Tabs for Posts and Bookmarks (only visible to profile owner) -->
+      {% if current_user.id == user.id %}
+      <div class="flex items-center space-x-6 border-b border-gray-200 mb-6">
+        <button id="tab-posts" onclick="switchTab('posts')" class="pb-2 text-lg font-bold border-b-2 border-blue-600 text-blue-600 transition">My Posts</button>
+        <button id="tab-bookmarks" onclick="switchTab('bookmarks')" class="pb-2 text-lg font-medium text-gray-500 hover:text-gray-800 transition">Bookmarks</button>
+      </div>
+      {% else %}
+        <h3 class="text-xl font-bold text-gray-800 mb-6">Posts by {{ user.username }}</h3>
+      {% endif %}
+
+      <!-- Posts List -->
+      <div id="content-posts" class="space-y-6">
+        {% for post in user.posts %}
+        <div class="bg-white rounded-xl shadow border border-gray-200 p-6 flex flex-col gap-2">
+          <div class="flex justify-between items-center mb-2">
+            <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-lg font-bold text-blue-700 hover:underline">{{ post.title }}</a>
+            <span class="text-xs text-gray-400">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
+          </div>
+          <p class="text-gray-700 mb-2 line-clamp-2">{{ post.content[:120] }}...</p>
+          {% if current_user.id == user.id %}
+          <div class="flex gap-2 mt-2">
+            <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg font-semibold hover:bg-yellow-200 transition text-sm">Edit</a>
+            <form method="post" action="{{ url_for('main.delete_post', post_id=post.id) }}" onsubmit="return confirm('Are you sure you want to delete this post?');">
+              <button type="submit" class="bg-red-100 text-red-700 px-3 py-1 rounded-lg font-semibold hover:bg-red-200 transition text-sm">Delete</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="text-gray-400 text-center py-12">No posts yet.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Bookmarks List (Hidden by default) -->
+      {% if current_user.id == user.id %}
+      <div id="content-bookmarks" class="space-y-6 hidden">
+        {% for post in user.bookmarks %}
+        <div class="bg-white rounded-xl shadow border border-gray-200 p-6 flex flex-col gap-2">
+          <div class="flex justify-between items-center mb-2">
+            <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-lg font-bold text-blue-700 hover:underline">{{ post.title }}</a>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">by {{ post.author.username }}</span>
+                <span class="text-xs text-gray-400">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
+            </div>
+          </div>
+          <p class="text-gray-700 mb-2 line-clamp-2">{{ post.content[:120] }}...</p>
+           <div class="flex gap-2 mt-2">
+               <!-- Unbookmark button could go here -->
+           </div>
+        </div>
+        {% else %}
+        <div class="text-gray-400 text-center py-12">No bookmarks yet.</div>
+        {% endfor %}
+      </div>
+
+      <script>
+        function switchTab(tab) {
+            const postsTab = document.getElementById('tab-posts');
+            const bookmarksTab = document.getElementById('tab-bookmarks');
+            const postsContent = document.getElementById('content-posts');
+            const bookmarksContent = document.getElementById('content-bookmarks');
+
+            if (tab === 'posts') {
+                postsTab.classList.add('border-blue-600', 'text-blue-600', 'font-bold');
+                postsTab.classList.remove('text-gray-500', 'font-medium');
+                bookmarksTab.classList.remove('border-blue-600', 'text-blue-600', 'font-bold');
+                bookmarksTab.classList.add('text-gray-500', 'font-medium');
+                
+                postsContent.classList.remove('hidden');
+                bookmarksContent.classList.add('hidden');
+            } else {
+                bookmarksTab.classList.add('border-blue-600', 'text-blue-600', 'font-bold');
+                bookmarksTab.classList.remove('text-gray-500', 'font-medium');
+                postsTab.classList.remove('border-blue-600', 'text-blue-600', 'font-bold');
+                postsTab.classList.add('text-gray-500', 'font-medium');
+
+                bookmarksContent.classList.remove('hidden');
+                postsContent.classList.add('hidden');
+            }
+        }
+      </script>
+      {% endif %}
+
+    </section>
+  </div>
+</div>
+{% endblock %}

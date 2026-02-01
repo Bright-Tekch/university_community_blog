@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Home — UniBlog{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 sm:px-4 lg:px-8">
+    <div class="flex flex-col xl:flex-row justify-center items-start gap-6 w-full max-w-7xl mx-auto">
+
+        <!-- Main Content Feed  -->
+        <main class="flex-1 min-w-0 max-w-3xl xl:max-w-5xl">
+                <div id="post-feed" class="space-y-4">
+            
+            <!-- Feed Header/Filters -->
+            <div class="flex items-center space-x-4 mb-4 p-3">
+                <a href="{{ url_for('main.index', feed='discover') }}" class="{{ 'font-bold text-lg text-gray-900 border-b-2 border-blue-600 pb-1' if feed_type == 'discover' else 'font-medium text-lg text-gray-500 hover:text-gray-900 hover:text-blue-600 pb-1 transition' }}">Discover</a>
+                <a href="{{ url_for('main.index', feed='following') }}" class="{{ 'font-bold text-lg text-gray-900 border-b-2 border-blue-600 pb-1' if feed_type == 'following' else 'font-medium text-lg text-gray-500 hover:text-gray-900 hover:text-blue-600 pb-1 transition' }}">Following</a>
+            </div>
+
+            <!-- Individual Post Cards -->
+            {% for post in posts %}
+            <article class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden transition hover:shadow-xl">
+                <!-- Cover Image Section (if present) -->
+                {% if post.thumbnail %}
+                <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="block">
+                    <img src="{{ url_for('main.uploaded_file', filename=post.thumbnail) }}" alt="cover" class="w-full max-h-60 object-cover rounded-t-xl transition-transform duration-300 group-hover:scale-[1.02]" />
+                </a>
+                {% endif %}
+                
+                <div class="p-4 sm:p-6">
+                    <header class="flex items-center gap-4 mb-6 sm:ml-8">
+                        <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
+                            <img src="{{ url_for('static', filename=post.author.avatar) if post.author.avatar else url_for('static', filename='images/default_avatar.png') }}" alt="avatar" class="w-10 h-10 rounded-full object-cover" />
+                        </div>
+                        <div>
+                            <a href="{{ url_for('main.profile', user_id=post.author.id) }}" class="text-gray-800 hover:text-blue-600 transition">{{ post.author.username }}</a>
+                            <div class="text-gray-500 text-sm">
+                                Posted on {{ post.date_posted.strftime("%B %d, %Y") }}
+                                <span class="mx-1">•</span>
+                                <span>{{ post.readingTime or 5 }} min read</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <!-- Title (Indented) -->
+                    <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="block mb-3 sm:ml-10 -mt-1">
+                        <h2 class="text-xl sm:text-3xl font-extrabold text-gray-900 hover:text-blue-600 transition leading-tight">
+                            {{ post.title }}
+                        </h2>
+                    </a>
+
+                    <!-- Tags (Indented) -->
+                  <div class="mb-4 flex flex-wrap gap-2 sm:ml-10">
+                        {% for tag in post.tags %}
+                            <a href="?tag={{ tag.name }}" class="text-sm font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-100 px-3 py-1 rounded-full bg-blue-50 transition">#{{ tag.name }}</a>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Content Truncation Simulation for Feed (Indented) -->
+                    <div class="text-gray-700 text-sm sm:text-base overflow-hidden max-h-24 mb-4 sm:ml-10">
+                        <div class="prose prose-sm max-w-none">
+                            {{ post.contentMarkdown|safe }}
+                        </div>
+                    </div>
+
+                    <!-- Footer Actions (Reaction and Comments) (Indented) -->
+                    <footer class="flex flex-wrap items-center gap-2 pt-2 mt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:ml-10">
+                        <div class="flex flex-wrap gap-3 sm:gap-2">
+                            <!-- Reactions Button (Dev.to Style: Icon, Count, Hover Effect) -->
+                            <button class="upvote-btn flex items-center text-sm font-medium transition p-2 rounded-lg 
+                                {{ 'text-blue-700 bg-blue-50' if post.id in liked_post_ids else 'text-gray-600 hover:text-blue-700 hover:bg-blue-50' }}" 
+                                aria-label="Upvote" data-post-id="{{ post.id }}">
+                                <svg class="w-5 h-5 mr-1" fill="{{ 'currentColor' if post.id in liked_post_ids else 'none' }}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                <span>{{ post.liked_by.count() }} Likes</span>
+                            </button>
+                            
+                            <!-- Comments Button (Styled for Consistency) -->
+                            <a href="{{ url_for('main.post_detail', post_id=post.id) }}#comments" class="flex items-center text-sm font-medium text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition p-2 rounded-lg">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span>{{ post.comments|length }} Comments</span>
+                            </a>
+
+                            <!-- Share Button -->
+                            <button class="share-btn flex items-center text-sm font-medium text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition p-2 rounded-lg" aria-label="Share" data-post-id="{{ post.id }}">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v2a4 4 0 004 4h8a4 4 0 004-4v-2"/><path d="M16 8l-4-4-4 4"/></svg>
+                                <span>Share</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Bookmark/Save Button -->
+                        <button class="bookmark-btn p-2 rounded-lg transition self-start sm:self-center 
+                            {{ 'text-blue-700 bg-blue-50' if post.id in bookmarked_post_ids else 'text-gray-400 hover:text-blue-600 hover:bg-blue-50' }}" 
+                            aria-label="Bookmark" data-post-id="{{ post.id }}" title="Save">
+                            <svg class="w-6 h-6" fill="{{ 'currentColor' if post.id in bookmarked_post_ids else 'none' }}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5v14l7-7 7 7V5z"></path></svg>
+                        </button>
+                    </footer>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Right Sidebar (Consolidated and visible on large screens) -->
+    <aside class="hidden xl:block w-72 shrink-0">
+        <div class="sticky top-20 space-y-4">
+            
+            <!-- Popular Tags -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h2 class="text-lg font-bold text-gray-800 mb-3">Popular Tags</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in discussSidebar.tags %}
+                        <a href="?tag={{ tag }}" class="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 transition duration-150 transform hover:scale-[1.05]">{{ tag }}</a>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Trending Discussions -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h2 class="text-lg font-bold text-gray-800 mb-3">#Discuss</h2>
+                <ul class="space-y-3">
+                    {% for topic in discussSidebar.trending %}
+                        <li class="border-b border-gray-100 last:border-b-0 pb-2">
+                            <a href="?topic={{ topic }}" class="block text-gray-700 hover:text-blue-600 text-sm font-medium transition duration-150">{{ topic }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- Quick Links -->
+            <section class="p-4">
+                <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">About Uniblog</h3>
+               <p class="text-sm text-gray-700 mb-4">
+                  Uniblog is a vibrant digital space designed exclusively for students, educators, and campus communities to share ideas, experiences, and knowledge. Built as a school 
+                  focused blogging platform, Uniblog empowers learners to express themselves, showcase creativity, and engage in meaningful discussions beyond the classroom.
+                </p>
+            </section>
+        </div>
+    </aside>
+</div>
+
+</div>
+
+<script>
+// Upvote logic
+for (const btn of document.querySelectorAll('.upvote-btn')) {
+  btn.addEventListener('click', async function(e) {
+    e.preventDefault();
+    const postId = btn.getAttribute('data-post-id');
+    const countSpan = btn.querySelector('span');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/post/${postId}/upvote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        countSpan.textContent = `${data.upvotes} Likes`;
+        const svg = btn.querySelector('svg');
+        if (data.liked) {
+            btn.classList.remove('text-gray-600', 'hover:text-blue-700', 'hover:bg-blue-50');
+            btn.classList.add('text-blue-700', 'bg-blue-50');
+            svg.setAttribute('fill', 'currentColor');
+        } else {
+            btn.classList.add('text-gray-600', 'hover:text-blue-700', 'hover:bg-blue-50');
+            btn.classList.remove('text-blue-700', 'bg-blue-50');
+            svg.setAttribute('fill', 'none');
+        }
+      }
+    } catch (err) {
+      alert('Upvote failed. Ensure you are logged in.');
+    }
+    btn.disabled = false;
+  });
+}
+// Improved share logic
+for (const btn of document.querySelectorAll('.share-btn')) {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    const postId = btn.getAttribute('data-post-id');
+    const postUrl = `${window.location.origin}/post/${postId}`;
+    if (navigator.share) {
+      navigator.share({ url: postUrl, title: document.title })
+        .catch(() => alert('Share cancelled.'));
+    } else {
+      // Fallback: copy to clipboard and open Twitter
+      navigator.clipboard.writeText(postUrl).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Share', 1500);
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}`, '_blank');
+      });
+    }
+  });
+}
+// Bookmark logic
+for (const btn of document.querySelectorAll('.bookmark-btn')) {
+    btn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const postId = btn.getAttribute('data-post-id');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/post/${postId}/bookmark`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        const svg = btn.querySelector('svg');
+        if (data.success) {
+            if (data.bookmarked) {
+                btn.classList.remove('text-gray-400', 'hover:text-blue-600', 'hover:bg-blue-50');
+                btn.classList.add('text-blue-700', 'bg-blue-50');
+                svg.setAttribute('fill', 'currentColor');
+            } else {
+                btn.classList.add('text-gray-400', 'hover:text-blue-600', 'hover:bg-blue-50');
+                btn.classList.remove('text-blue-700', 'bg-blue-50');
+                svg.setAttribute('fill', 'none');
+            }
+        }
+      } catch (err) {
+        alert('Bookmark failed. Ensure you are logged in.');
+      }
+      btn.disabled = false;
+    });
+}
+</script>
+
+{% endblock %}
